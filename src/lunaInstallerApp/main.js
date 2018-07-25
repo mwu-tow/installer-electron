@@ -60,7 +60,7 @@ function spawnProcess() {
                     parsed = JSON.parse(parsed)
                 }
             } catch(err) {
-                dialog.showErrorBox("Internal error", "Cannot parse \"" + input + "\" to json")
+//                dialog.showErrorBox("Internal error", "Cannot parse \"" + input + "\" to json")
                 parsed = ""
             }
             if (parsed !== "") {

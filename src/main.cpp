@@ -108,7 +108,7 @@ int main(int argc, char *argv[])
 
 		QProcess process;
 		setupLibraries(tmpDir, process);
-		process.start(execPath);
+		process.start(QStringLiteral("\"") + execPath + QChar('\"'));
 		process.waitForFinished(-1); // -1 means no timeout
 		int exitCode = process.exitCode();
 		if (exitCode)
