@@ -4,19 +4,22 @@ project(electronLunaInstaller)
 # Find includes in corresponding build directories
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
+message("Dirs: ${CMAKE_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR}")
+
 if (WIN32 OR MINGW)
     set(CONSOLE_INSTALLER_FILENAME "consoleInstaller.exe")
-	set(MT_EXE "mt.exe" CACHE STRING "Path to mt.exe program")
+    set(MT_EXE "mt.exe" CACHE STRING "Path to mt.exe program")
+    set(SIGNTOOL_EXE "signtool.exe" CACHE STRING "Path to signtool.exe program")
 else()
     set(CONSOLE_INSTALLER_FILENAME "consoleInstaller")
 endif()
 
 if (APPLE)
-	set(ELECTRON_INSTALLER_APP_NAME "lunaInstaller")
-	set(PACKAGED_APP_RESOURCES_PATH "${CMAKE_CURRENT_BINARY_DIR}/lunaInstallerApp/lunaInstaller.app/Contents/Resources/app")
+    set(ELECTRON_INSTALLER_APP_NAME "lunaInstaller")
+    set(PACKAGED_APP_RESOURCES_PATH "${CMAKE_CURRENT_BINARY_DIR}/lunaInstallerApp/lunaInstaller.app/Contents/Resources/app")
 else()
-	set(ELECTRON_INSTALLER_APP_NAME "electronLunaInstaller")
-	set(PACKAGED_APP_RESOURCES_PATH "${CMAKE_CURRENT_BINARY_DIR}/lunaInstallerApp/resources/app")
+    set(ELECTRON_INSTALLER_APP_NAME "electronLunaInstaller")
+    set(PACKAGED_APP_RESOURCES_PATH "${CMAKE_CURRENT_BINARY_DIR}/lunaInstallerApp/resources/app")
 endif()
 
 set(APPLICATION_ICON "${CMAKE_SOURCE_DIR}/src/lunaInstallerApp/img/luna_logo")
@@ -51,6 +54,8 @@ if (NOT ELECTRON_PACKAGER_EXE)
 endif(NOT ELECTRON_PACKAGER_EXE)
 
 file(GLOB APP_SOURCES ${CMAKE_SOURCE_DIR}/src/lunaInstallerApp/* ${CMAKE_SOURCE_DIR}/src/lunaInstallerApp/img/* ${CMAKE_SOURCE_DIR}/src/lunaInstallerApp/css/* ${CMAKE_SOURCE_DIR}/src/lunaInstallerApp/fonts/*)
+
+message("App sources: ${APP_SOURCES}")
 
 add_custom_target(lunaInstallerDeps # example of electron app dependency
     COMMAND "${NPM_EXE}" install
@@ -134,9 +139,9 @@ if(NOT APPLE)
     endif()
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,--as-needed")
 #    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} --std=c++11")
-	if (MINGW)
-		set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-subsystem,windows")
-	endif(MINGW)
+    if (MINGW)
+        set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-subsystem,windows")
+    endif(MINGW)
 
     # QRC
 
@@ -150,7 +155,7 @@ if(NOT APPLE)
             set (PYTHON_EXE "/c/Python27/python")
         endif()
     endif(NOT PYTHON_EXE)
-	
+
     add_custom_command(OUTPUT lunaInstallerApp.qrc
         COMMAND ${PYTHON_EXE} ${CMAKE_SOURCE_DIR}/scripts/generateQrc.py
         MAIN_DEPENDENCY scripts/generateQrc.py
@@ -225,13 +230,13 @@ if(NOT APPLE)
     else()
         message(FATAL_ERROR "System is not supported; the only supported os are linux, windows and osx")
     endif()
-	
-	if(MINGW)
-		set(CMAKE_RC_COMPILER_INIT windres)
-		ENABLE_LANGUAGE(RC)
-		SET(CMAKE_RC_COMPILE_OBJECT
-			"<CMAKE_RC_COMPILER> <FLAGS> -O coff <DEFINES> -i <SOURCE> -o <OBJECT>")
-	endif(MINGW)
+
+    if(MINGW)
+        set(CMAKE_RC_COMPILER_INIT windres)
+        ENABLE_LANGUAGE(RC)
+        SET(CMAKE_RC_COMPILE_OBJECT
+            "<CMAKE_RC_COMPILER> <FLAGS> -O coff <DEFINES> -i <SOURCE> -o <OBJECT>")
+    endif(MINGW)
 
     add_executable(lunaInstaller WIN32
         src/embeddedFiles.h
@@ -244,16 +249,23 @@ if(NOT APPLE)
         lunaInstallerApp.qrc
         misc.qrc
         appicon.rc
+        versioninfo.rc
         )
-		
-	if (MINGW)
-		add_custom_target(lunaInstallerManifest ALL
-			COMMAND  ${MT_EXE} -manifest \"${CMAKE_SOURCE_DIR}/manifest.xml\" \"-outputresource:lunaInstaller.exe$<SEMICOLON>1\"
-			DEPENDS lunaInstaller
-			WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-			SOURCES manifest.xml
-			)
-	endif(MINGW)
+
+    if (MINGW)
+        add_custom_target(lunaInstallerManifest ALL
+            COMMAND  ${MT_EXE} -manifest \"${CMAKE_SOURCE_DIR}/manifest.xml\" \"-outputresource:lunaInstaller.exe$<SEMICOLON>1\"
+            DEPENDS lunaInstaller
+            WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+            SOURCES manifest.xml
+            )
+        set(TIMESTAMP_URL http://timestamp.digicert.com)
+        add_custom_target(lunaInstallerSigned ALL
+            COMMAND ${SIGNTOOL_EXE} sign -v -sha1 6be7597963a2fb0697bdd3d47bd7b14f60644a77 -t ${TIMESTAMP_URL} lunaInstaller.exe
+            DEPENDS lunaInstallerManifest
+            WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+            )
+    endif(MINGW)
 
     set_target_properties(lunaInstaller PROPERTIES AUTOGEN_TARGET_DEPENDS lunaInstallerApp.qrc)
 
